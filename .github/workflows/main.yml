@@ -1,0 +1,44 @@
+name: Flutter Build APK
+
+on:
+  push:
+    branches:
+      - main  # Hangi branch'e yüklediğinde çalışsın?
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # GitHub'ın sağladığı ücretsiz Linux sunucu
+
+    steps:
+      # 1. Kodları sunucuya çek
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Java kurulumu (Android build için gerekli)
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Flutter kurulumu
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x' # Veya kendi sürümün
+          channel: 'stable'
+
+      # 4. Paketleri çek
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 5. APK Oluştur (Release modunda)
+      - name: Build APK
+        run: flutter build apk --release
+
+      # 6. Oluşan APK'yı GitHub paneline yükle (İndirebilmen için)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
