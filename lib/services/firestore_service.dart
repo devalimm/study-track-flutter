@@ -36,38 +36,51 @@ class FirestoreService {
   }
 
   // Kullanıcının bugünkü oturumlarını getir
-  Future<List<StudySession>> getToadaysSession(String userId) async {
+  Future<List<StudySession>> getTodaysSessions(String odiserId) async {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
 
+    // Sadece userId'ye göre filtrele, tarih filtresini client-side yap
     final snapshot = await _db
         .collection('study_sessions')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThan: Timestamp.fromDate(endOfDay))
+        .where('userId', isEqualTo: odiserId)
         .get();
 
-    return snapshot.docs
+    final allSessions = snapshot.docs
         .map((doc) => StudySession.fromMap(doc.data(), doc.id))
         .toList();
+
+    // Bugünün oturumlarını filtrele
+    return allSessions.where((session) {
+      return session.date.year == startOfDay.year &&
+             session.date.month == startOfDay.month &&
+             session.date.day == startOfDay.day;
+    }).toList();
   }
 
   // Son 7 günün oturumlarını getir
-  Future<List<StudySession>> getWeeklySessions(String userId) async {
+  Future<List<StudySession>> getWeeklySessions(String odiserId) async {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
 
+    // Sadece userId'ye göre filtrele
     final snapshot = await _db
         .collection('study_sessions')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
-        .orderBy('date', descending: true)
+        .where('userId', isEqualTo: odiserId)
         .get();
 
-    return snapshot.docs
+    final allSessions = snapshot.docs
         .map((doc) => StudySession.fromMap(doc.data(), doc.id))
         .toList();
+
+    // Son 7 günün oturumlarını filtrele ve sırala
+    final weeklySessions = allSessions.where((session) {
+      return session.date.isAfter(weekAgo) || 
+             session.date.isAtSameMomentAs(weekAgo);
+    }).toList();
+
+    weeklySessions.sort((a, b) => b.date.compareTo(a.date));
+    return weeklySessions;
   }
 
   // ==================== GOALS ====================
@@ -78,8 +91,8 @@ class FirestoreService {
   }
 
   // Kullanıcının hedefini getir
-  Future<Goal?> getGoal(String userId) async {
-    final doc = await _db.collection('goals').doc(userId).get();
+  Future<Goal?> getGoal(String odiserId) async {
+    final doc = await _db.collection('goals').doc(odiserId).get();
     if (doc.exists) {
       return Goal.fromMap(doc.data()!, doc.id);
     }

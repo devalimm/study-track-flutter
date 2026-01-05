@@ -31,7 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       // Bugünkü oturumları al
-      final sessions = await _firestoreService.getToadaysSession(user.uid);
+      final sessions = await _firestoreService.getTodaysSessions(user.uid);
       _todayMinutes = sessions.fold(0, (sum, s) => sum + s.durationMinutes);
 
       // Hedefi al
